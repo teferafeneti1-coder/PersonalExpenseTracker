@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<VBox prefHeight="650.0" prefWidth="900.0" spacing="15.0"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="personalexpensetracker.ExpenseTrackerFXMLController">
+
+    <padding>
+        <Insets top="20.0" right="20.0" bottom="20.0" left="20.0" />
+    </padding>
+
+    <!-- Welcome + Title + Logout -->
+  <!-- Welcome + Title + Logout -->
+<HBox alignment="CENTER_LEFT" spacing="30.0"
+      style="-fx-background-color: #1976D2;   /* ← change this color */
+             -fx-padding: 12 20 12 20;
+             -fx-border-color: #1565C0;
+             -fx-border-width: 0 0 2 0;">
+    <Label fx:id="welcomeLabel" text="Welcome" style="-fx-font-weight: bold; -fx-text-fill: white;">
+        <font>
+            <Font size="24.0" />
+        </font>
+    </Label>
+    <Label text="Personal Finance Tracker" alignment="CENTER" HBox.hgrow="ALWAYS"
+           style="-fx-text-fill: white;">
+        <font>
+            <Font size="28.0" />
+        </font>
+    </Label>
+    <Button text="Logout" onAction="#handleLogout"
+            style="-fx-background-color: #FF5722; -fx-text-fill: white;"
+            prefWidth="100"/>
+</HBox>
+
+    <!-- Input form -->
+    <HBox spacing="12.0" alignment="CENTER_LEFT">
+        <Label text="Date:" />
+        <DatePicker fx:id="datePicker" prefWidth="140.0" />
+        <Label text="Description:" />
+        <TextField fx:id="descField" prefWidth="220.0" promptText="e.g. Monthly salary" />
+        <Label text="Category:" />
+        <ComboBox fx:id="categoryCombo" prefWidth="160.0" promptText="Select category" />
+        <Label text="Type:" />
+        <ComboBox fx:id="typeCombo" prefWidth="120.0" promptText="Income/Expense" />
+        <Label text="Amount:" />
+        <TextField fx:id="amountField" prefWidth="110.0" promptText="1234.56" />
+    </HBox>
+
+    <!-- Buttons -->
+    <HBox spacing="20.0" alignment="CENTER">
+        <Button text="Add Entry" onAction="#addExpense"
+                style="-fx-background-color: #4CAF50; -fx-text-fill: white;"
+                prefWidth="140.0" />
+        <Button text="Edit Selected" onAction="#editExpense"
+                style="-fx-background-color: #2196F3; -fx-text-fill: white;"
+                prefWidth="140.0" />
+        <Button text="Delete Selected" onAction="#deleteExpense"
+                style="-fx-background-color: #f44336; -fx-text-fill: white;"
+                prefWidth="140.0" />
+    </HBox>
+
+    <!-- Table -->
+    <TableView fx:id="expenseTable" prefHeight="320.0">
+        <columns>
+            <TableColumn fx:id="dateCol" text="Date" prefWidth="110.0" />
+            <TableColumn fx:id="descCol" text="Description" prefWidth="260.0" />
+            <TableColumn fx:id="categoryCol" text="Category" prefWidth="160.0" />
+            <TableColumn fx:id="typeCol" text="Type" prefWidth="100.0" />
+            <TableColumn fx:id="amountCol" text="Amount (ETB)" prefWidth="130.0"
+                         style="-fx-alignment: CENTER_RIGHT;" />
+        </columns>
+    </TableView>
+
+    <!-- Summary -->
+    <VBox spacing="8.0" alignment="CENTER_RIGHT">
+        <Label text="Summary" alignment="CENTER">
+            <font>
+                <Font size="22.0" />
+            </font>
+        </Label>
+        <Label fx:id="incomeLabel" text="Total Income: 0.00"
+               style="-fx-font-size: 16; -fx-text-fill: #2E7D32;" />
+        <Label fx:id="expenseLabel" text="Total Expenses: 0.00"
+               style="-fx-font-size: 16; -fx-text-fill: #C62828;" />
+        <Separator prefWidth="400.0" />
+        <Label fx:id="balanceLabel" text="Net Balance: 0.00"
+               style="-fx-font-size: 22; -fx-font-weight: bold;" />
+    </VBox>
+
+</VBox>
