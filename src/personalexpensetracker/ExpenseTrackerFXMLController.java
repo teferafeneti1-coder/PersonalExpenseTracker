@@ -5,12 +5,16 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.chart.PieChart;
 import javafx.stage.Stage;
-
+import javafx.stage.FileChooser;
 import java.net.URL;
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.io.*;
 
 public class ExpenseTrackerFXMLController implements Initializable {
 
@@ -29,21 +33,20 @@ public class ExpenseTrackerFXMLController implements Initializable {
     @FXML private Label expenseLabel;
     @FXML private Label balanceLabel;
     @FXML private Label welcomeLabel;
+    @FXML private PieChart incomePieChart;
+    @FXML private PieChart expensePieChart;
 
     private String currentUsername;
     private int currentUserId;
     private Stage loginStage;
-
     private ObservableList<Expense> data = FXCollections.observableArrayList();
 
     public void setUser(String username, int userId, Stage loginStage) {
         this.currentUsername = username;
         this.currentUserId = userId;
         this.loginStage = loginStage;
-
-        if (welcomeLabel != null) {
-            welcomeLabel.setText("Welcome, " + username);
-        }
+        welcomeLabel.setText("Welcome, " + username);
+        loadData();
     }
 
     @Override
@@ -61,22 +64,8 @@ public class ExpenseTrackerFXMLController implements Initializable {
 
         datePicker.setValue(LocalDate.now());
 
-        // Optional UX improvement: enable/disable edit & delete when row selected
         expenseTable.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
-            boolean hasSelection = newVal != null;
-            // You can add @FXML private Button editButton; and deleteButton; if you want
-            // editButton.setDisable(!hasSelection);
-            // deleteButton.setDisable(!hasSelection);
-        });
-
-        // Optional: double-click row to load into form for editing
-        expenseTable.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2) {
-                Expense selected = expenseTable.getSelectionModel().getSelectedItem();
-                if (selected != null) {
-                    loadExpenseIntoForm(selected);
-                }
-            }
+            if (newVal != null) loadExpenseIntoForm(newVal);
         });
     }
 
@@ -85,7 +74,6 @@ public class ExpenseTrackerFXMLController implements Initializable {
         descField.setText(e.getDescription());
         categoryCombo.setValue(e.getCategory());
         typeCombo.setValue(e.getType());
-        // Show positive amount in field (we negate on save if Expense)
         amountField.setText(String.format("%.2f", Math.abs(e.getAmount())));
     }
 
@@ -103,27 +91,27 @@ public class ExpenseTrackerFXMLController implements Initializable {
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                Expense e = new Expense(
+                data.add(new Expense(
                     rs.getInt("id"),
                     rs.getString("date_str"),
                     rs.getString("description"),
                     rs.getString("category"),
                     rs.getDouble("amount"),
                     rs.getString("t_type")
-                );
-                data.add(e);
+                ));
             }
+
             updateSummary();
+            updateCharts();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Error loading data");
+            showAlert("Error loading data: " + e.getMessage());
         }
     }
 
     @FXML
     private void addExpense() {
-        if (!isFormValid()) return;
-
+        if (!validateForm()) return;
         double amount = parseAmount();
         if (Double.isNaN(amount)) return;
 
@@ -136,11 +124,10 @@ public class ExpenseTrackerFXMLController implements Initializable {
     private void editExpense() {
         Expense selected = expenseTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAlert("Please select a row to edit");
+            showAlert("Please select an entry to edit");
             return;
         }
-
-        if (!isFormValid()) return;
+        if (!validateForm()) return;
 
         double amount = parseAmount();
         if (Double.isNaN(amount)) return;
@@ -151,10 +138,62 @@ public class ExpenseTrackerFXMLController implements Initializable {
         showAlert("Entry updated successfully");
     }
 
-    private boolean isFormValid() {
-        if (datePicker.getValue() == null || descField.getText().isBlank() ||
+    @FXML
+    private void deleteExpense() {
+        Expense selected = expenseTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Please select an entry to delete");
+            return;
+        }
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "DELETE FROM transactions WHERE id = ?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, selected.getId());
+            ps.executeUpdate();
+            loadData();
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error deleting entry");
+        }
+    }
+
+    @FXML
+    private void exportToCsv() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save Transactions as CSV");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+        File file = fileChooser.showSaveDialog(expenseTable.getScene().getWindow());
+
+        if (file == null) return;
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            writer.write("Date,Description,Category,Type,Amount\n");
+
+            for (Expense e : data) {
+                String desc = e.getDescription().replace("\"", "\"\"");
+                writer.write(String.format("%s,\"%s\",%s,%s,%.2f\n",
+                    e.getDate(), desc, e.getCategory(), e.getType(), e.getAmount()));
+            }
+            showAlert("Data exported successfully to:\n" + file.getAbsolutePath());
+        } catch (IOException ex) {
+            showAlert("Export failed: " + ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleLogout() {
+        Stage mainStage = (Stage) expenseTable.getScene().getWindow();
+        mainStage.close();
+        if (loginStage != null) {
+            loginStage.show();
+        }
+    }
+
+    private boolean validateForm() {
+        if (datePicker.getValue() == null || descField.getText().trim().isEmpty() ||
             categoryCombo.getValue() == null || typeCombo.getValue() == null ||
-            amountField.getText().isBlank()) {
+            amountField.getText().trim().isEmpty()) {
             showAlert("Please fill all fields");
             return false;
         }
@@ -164,7 +203,7 @@ public class ExpenseTrackerFXMLController implements Initializable {
     private double parseAmount() {
         try {
             double amount = Double.parseDouble(amountField.getText().trim());
-            if (typeCombo.getValue().equals("Expense")) {
+            if ("Expense".equals(typeCombo.getValue())) {
                 amount = -amount;
             }
             return amount;
@@ -177,36 +216,14 @@ public class ExpenseTrackerFXMLController implements Initializable {
     private void saveTransaction(Integer id, double amount) {
         String sql;
         if (id == null) {
-            sql = """
-                INSERT INTO transactions (user_id, t_date, description, category, t_type, amount)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """;
+            sql = "INSERT INTO transactions (user_id, t_date, description, category, t_type, amount) VALUES (?, ?, ?, ?, ?, ?)";
         } else {
-            sql = """
-                UPDATE transactions
-                SET t_date = ?, description = ?, category = ?, t_type = ?, amount = ?
-                WHERE id = ?
-                """;
+            sql = "UPDATE transactions SET t_date=?, description=?, category=?, t_type=?, amount=? WHERE id=?";
         }
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setDate(1, java.sql.Date.valueOf(datePicker.getValue()));
-            ps.setString(2, descField.getText().trim());
-            ps.setString(3, categoryCombo.getValue());
-            ps.setString(4, typeCombo.getValue());
-            ps.setDouble(5, amount);
-
-            if (id != null) {
-                ps.setInt(6, id);
-            } else {
-                ps.setInt(6, currentUserId);  // for INSERT → user_id is position 1
-                // Wait — adjust indices for INSERT
-                // Actually better to separate logic slightly:
-            }
-
-            // Correction: separate insert vs update
             if (id == null) {
                 ps.setInt(1, currentUserId);
                 ps.setDate(2, java.sql.Date.valueOf(datePicker.getValue()));
@@ -224,10 +241,9 @@ public class ExpenseTrackerFXMLController implements Initializable {
             }
 
             ps.executeUpdate();
-
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
-            showAlert(id == null ? "Error saving entry" : "Error updating entry");
+            showAlert(id == null ? "Error adding entry" : "Error updating entry");
         }
     }
 
@@ -239,62 +255,68 @@ public class ExpenseTrackerFXMLController implements Initializable {
         typeCombo.setValue(null);
     }
 
-    @FXML
-    private void deleteExpense() {
-        Expense selected = expenseTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Please select a row to delete");
-            return;
-        }
-
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            String sql = "DELETE FROM transactions WHERE id = ?";
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, selected.getId());
-            ps.executeUpdate();
-            loadData();
-        } catch (Exception e) {
-            e.printStackTrace();
-            showAlert("Error deleting entry");
-        }
-    }
-
-    @FXML
-    private void handleLogout() {
-        Stage mainStage = (Stage) expenseTable.getScene().getWindow();
-        mainStage.close();
-        if (loginStage != null) {
-            loginStage.show();
-        }
-    }
-
     private void updateSummary() {
-        double income = 0;
-        double expense = 0;
-        for (Expense e : data) {
-            double a = e.getAmount();
-            if (a > 0) income += a;
-            else expense += Math.abs(a);
-        }
+    double income = 0;
+    double expense = 0;
 
-        incomeLabel.setText(String.format("Total Income: %.2f", income));
-        expenseLabel.setText(String.format("Total Expenses: %.2f", expense));
-
-        double bal = income - expense;
-        balanceLabel.setText(String.format("Net Balance: %.2f", bal));
-
-        if (bal >= 0) {
-            balanceLabel.setStyle("-fx-text-fill: green; -fx-font-size: 18;");
-        } else {
-            balanceLabel.setStyle("-fx-text-fill: red; -fx-font-size: 18;");
-        }
+    for (Expense e : data) {
+        double amt = e.getAmount();
+        if (amt > 0) income += amt;
+        else expense += Math.abs(amt);
     }
 
-    private void showAlert(String msg) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Warning");
+    System.out.println("Income: " + income);
+    System.out.println("Expense: " + expense);
+    System.out.println("Balance: " + (income - expense));
+
+    incomeLabel.setText(String.format("Total Income: %.2f ETB", income));
+    expenseLabel.setText(String.format("Total Expenses: %.2f ETB", expense));
+
+    double balance = income - expense;
+    balanceLabel.setText(String.format("Net Balance: %.2f ETB", balance));
+
+    // Force visible + strong contrast for testing
+    balanceLabel.setStyle(
+        "-fx-font-size: 24; " +
+        "-fx-font-weight: bold; " +
+        "-fx-text-fill: #000000; " +           // black text
+        "-fx-background-color: #FFFF99; " +    // light yellow background
+        "-fx-padding: 8;"                      // more space
+    );
+
+    System.out.println("balanceLabel text set to: " + balanceLabel.getText());
+}
+
+    private void updateCharts() {
+        Map<String, Double> incomeMap = new HashMap<>();
+        Map<String, Double> expenseMap = new HashMap<>();
+
+        for (Expense e : data) {
+            String cat = e.getCategory();
+            double amt = e.getAmount();
+            if (amt > 0) {
+                incomeMap.merge(cat, amt, Double::sum);
+            } else {
+                expenseMap.merge(cat, Math.abs(amt), Double::sum);
+            }
+        }
+
+        // Income Pie
+        ObservableList<PieChart.Data> incomeData = FXCollections.observableArrayList();
+        incomeMap.forEach((cat, value) -> incomeData.add(new PieChart.Data(cat + " (" + String.format("%.0f", value) + ")", value)));
+        incomePieChart.setData(incomeData);
+
+        // Expense Pie
+        ObservableList<PieChart.Data> expenseData = FXCollections.observableArrayList();
+        expenseMap.forEach((cat, value) -> expenseData.add(new PieChart.Data(cat + " (" + String.format("%.0f", value) + ")", value)));
+        expensePieChart.setData(expenseData);
+    }
+
+    private void showAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Information");
         alert.setHeaderText(null);
-        alert.setContentText(msg);
+        alert.setContentText(message);
         alert.showAndWait();
     }
 }

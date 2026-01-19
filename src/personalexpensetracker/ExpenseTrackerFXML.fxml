@@ -2,94 +2,117 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.chart.PieChart?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<VBox prefHeight="650.0" prefWidth="900.0" spacing="15.0"
+<VBox prefHeight="750.0" prefWidth="1100.0" spacing="15.0"
       xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="personalexpensetracker.ExpenseTrackerFXMLController">
+   <padding>
+      <Insets top="20.0" right="20.0" bottom="20.0" left="20.0" />
+   </padding>
 
-    <padding>
-        <Insets top="20.0" right="20.0" bottom="20.0" left="20.0" />
-    </padding>
-
-    <!-- Welcome + Title + Logout -->
-  <!-- Welcome + Title + Logout -->
-<HBox alignment="CENTER_LEFT" spacing="30.0"
-      style="-fx-background-color: #1976D2;   /* ← change this color */
-             -fx-padding: 12 20 12 20;
-             -fx-border-color: #1565C0;
-             -fx-border-width: 0 0 2 0;">
-    <Label fx:id="welcomeLabel" text="Welcome" style="-fx-font-weight: bold; -fx-text-fill: white;">
-        <font>
+   <!-- Header -->
+   <HBox alignment="CENTER_LEFT" spacing="30.0"
+         style="-fx-background-color: #1976D2; -fx-padding: 12 20 12 20; -fx-border-color: #1565C0; -fx-border-width: 0 0 2 0;">
+      <Label fx:id="welcomeLabel" text="Welcome" style="-fx-font-weight: bold; -fx-text-fill: white;">
+         <font>
             <Font size="24.0" />
-        </font>
-    </Label>
-    <Label text="Personal Finance Tracker" alignment="CENTER" HBox.hgrow="ALWAYS"
-           style="-fx-text-fill: white;">
-        <font>
+         </font>
+      </Label>
+      <Label text="Personal Finance Tracker" alignment="CENTER" HBox.hgrow="ALWAYS"
+             style="-fx-text-fill: white;">
+         <font>
             <Font size="28.0" />
-        </font>
-    </Label>
-    <Button text="Logout" onAction="#handleLogout"
-            style="-fx-background-color: #FF5722; -fx-text-fill: white;"
-            prefWidth="100"/>
-</HBox>
+         </font>
+      </Label>
+      <Button text="Logout" onAction="#handleLogout"
+              style="-fx-background-color: #FF5722; -fx-text-fill: white;"
+              prefWidth="100"/>
+   </HBox>
 
-    <!-- Input form -->
-    <HBox spacing="12.0" alignment="CENTER_LEFT">
-        <Label text="Date:" />
-        <DatePicker fx:id="datePicker" prefWidth="140.0" />
-        <Label text="Description:" />
-        <TextField fx:id="descField" prefWidth="220.0" promptText="e.g. Monthly salary" />
-        <Label text="Category:" />
-        <ComboBox fx:id="categoryCombo" prefWidth="160.0" promptText="Select category" />
-        <Label text="Type:" />
-        <ComboBox fx:id="typeCombo" prefWidth="120.0" promptText="Income/Expense" />
-        <Label text="Amount:" />
-        <TextField fx:id="amountField" prefWidth="110.0" promptText="1234.56" />
-    </HBox>
+   <!-- Input form -->
+   <HBox spacing="12.0" alignment="CENTER_LEFT">
+      <Label text="Date:" />
+      <DatePicker fx:id="datePicker" prefWidth="140.0" />
+      <Label text="Description:" />
+      <TextField fx:id="descField" prefWidth="220.0" promptText="e.g. Monthly salary" />
+      <Label text="Category:" />
+      <ComboBox fx:id="categoryCombo" prefWidth="160.0" promptText="Select category" />
+      <Label text="Type:" />
+      <ComboBox fx:id="typeCombo" prefWidth="120.0" promptText="Income/Expense" />
+      <Label text="Amount:" />
+      <TextField fx:id="amountField" prefWidth="110.0" promptText="1234.56" />
+   </HBox>
 
-    <!-- Buttons -->
-    <HBox spacing="20.0" alignment="CENTER">
-        <Button text="Add Entry" onAction="#addExpense"
-                style="-fx-background-color: #4CAF50; -fx-text-fill: white;"
-                prefWidth="140.0" />
-        <Button text="Edit Selected" onAction="#editExpense"
-                style="-fx-background-color: #2196F3; -fx-text-fill: white;"
-                prefWidth="140.0" />
-        <Button text="Delete Selected" onAction="#deleteExpense"
-                style="-fx-background-color: #f44336; -fx-text-fill: white;"
-                prefWidth="140.0" />
-    </HBox>
+   <!-- Action Buttons -->
+   <HBox spacing="20.0" alignment="CENTER">
+      <Button text="Add Entry" onAction="#addExpense"
+              style="-fx-background-color: #4CAF50; -fx-text-fill: white;"
+              prefWidth="140.0" />
+      <Button text="Edit Selected" onAction="#editExpense"
+              style="-fx-background-color: #2196F3; -fx-text-fill: white;"
+              prefWidth="140.0" />
+      <Button text="Delete Selected" onAction="#deleteExpense"
+              style="-fx-background-color: #f44336; -fx-text-fill: white;"
+              prefWidth="140.0" />
+      <Button text="Export to CSV" onAction="#exportToCsv"
+              style="-fx-background-color: #673AB7; -fx-text-fill: white;"
+              prefWidth="140.0" />
+   </HBox>
 
-    <!-- Table -->
-    <TableView fx:id="expenseTable" prefHeight="320.0">
-        <columns>
+   <!-- Table + Two Pie Charts side by side -->
+   <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+      <!-- Table -->
+      <TableView fx:id="expenseTable" prefHeight="400.0" HBox.hgrow="ALWAYS">
+         <columns>
             <TableColumn fx:id="dateCol" text="Date" prefWidth="110.0" />
             <TableColumn fx:id="descCol" text="Description" prefWidth="260.0" />
             <TableColumn fx:id="categoryCol" text="Category" prefWidth="160.0" />
             <TableColumn fx:id="typeCol" text="Type" prefWidth="100.0" />
             <TableColumn fx:id="amountCol" text="Amount (ETB)" prefWidth="130.0"
                          style="-fx-alignment: CENTER_RIGHT;" />
-        </columns>
-    </TableView>
+         </columns>
+      </TableView>
 
-    <!-- Summary -->
-    <VBox spacing="8.0" alignment="CENTER_RIGHT">
-        <Label text="Summary" alignment="CENTER">
-            <font>
-                <Font size="22.0" />
-            </font>
-        </Label>
-        <Label fx:id="incomeLabel" text="Total Income: 0.00"
-               style="-fx-font-size: 16; -fx-text-fill: #2E7D32;" />
-        <Label fx:id="expenseLabel" text="Total Expenses: 0.00"
-               style="-fx-font-size: 16; -fx-text-fill: #C62828;" />
-        <Separator prefWidth="400.0" />
-        <Label fx:id="balanceLabel" text="Net Balance: 0.00"
-               style="-fx-font-size: 22; -fx-font-weight: bold;" />
+      <!-- Pie Charts -->
+      <VBox spacing="15.0" alignment="TOP_CENTER" prefWidth="420.0">
+         <VBox spacing="8.0" alignment="CENTER">
+            <Label text="Income by Category" alignment="CENTER"
+                   style="-fx-font-size: 16; -fx-font-weight: bold;" />
+            <PieChart fx:id="incomePieChart" prefHeight="280.0" prefWidth="400.0" />
+         </VBox>
+
+         <VBox spacing="8.0" alignment="CENTER">
+            <Label text="Expenses by Category" alignment="CENTER"
+                   style="-fx-font-size: 16; -fx-font-weight: bold;" />
+            <PieChart fx:id="expensePieChart" prefHeight="280.0" prefWidth="400.0" />
+         </VBox>
+      </VBox>
+   </HBox>
+
+   <!-- Summary -->
+   
+<VBox spacing="12.0" alignment="CENTER" style="-fx-padding: 0 20 30 20;">
+        <Label text="Summary" style="-fx-font-size: 20; -fx-font-weight: bold;" />
+        
+        <HBox spacing="50" alignment="CENTER">
+            <Label fx:id="incomeLabel" text="Total Income: 0.00 ETB"
+                   style="-fx-font-size: 17; -fx-text-fill: #2E7D32; -fx-font-weight: bold;" />
+            <Label fx:id="expenseLabel" text="Total Expenses: 0.00 ETB"
+                   style="-fx-font-size: 17; -fx-text-fill: #C62828; -fx-font-weight: bold;" />
+        </HBox>
+        
+        <Label fx:id="balanceLabel" text="Net Balance: 0.00 ETB" alignment="CENTER"
+               style="-fx-font-size: 26; -fx-font-weight: bold; 
+                      -fx-text-fill: #00008B; 
+                      -fx-background-color: #f8f9ff; 
+                      -fx-padding: 8 25 8 25;
+                      -fx-border-color: #d0d0ff;
+                      -fx-border-width: 1;
+                      -fx-border-radius: 3;" />
     </VBox>
 
 </VBox>
